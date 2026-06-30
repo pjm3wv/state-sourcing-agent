@@ -29,10 +29,15 @@ Drop in two different companies' config + knowledge and the same engine runs two
 
 ## Repository Map
 
+Items marked _(remaining)_ are specified in `CLAUDE.md` / `HANDOFF.md` but not yet authored.
+
 ```
-sourcing-brain/
+state-sourcing-agent/
 ├── README.md                 ← you are here: what it is + how to wire it
 ├── ARCHITECTURE.md           ← the multi-agent design; read this second
+├── CLAUDE.md                 ← design-decision log + build status
+├── HANDOFF.md                ← session-to-session handoff (start here if resuming)
+├── .mcp.json.example         ← capability→provider bindings; copy to .mcp.json (gitignored)
 │
 ├── config/                   ← COMPANY-SPECIFIC. Fill these in per deployment.
 │   ├── company-profile.template.yaml
@@ -40,34 +45,46 @@ sourcing-brain/
 │   └── jurisdictions.template.yaml
 │
 ├── agents/                   ← the brain. One file per agent = a system prompt + I/O contract.
-│   ├── orchestrator.md
+│   ├── orchestrator.md                 (owns the pipeline + state + the two gates)
+│   ├── sourcing-agent.md               (step 1 — minimize effective cost)
+│   ├── quoting-agent.md                (step 2 — optimal bid / price-to-win)
 │   ├── intake-agent.md
 │   ├── extraction-agent.md
 │   ├── catalog-agent.md
 │   ├── sourcing-strategist.md
-│   ├── price-discovery-agent.md
-│   ├── competitive-intel-agent.md
-│   ├── quote-assembly-agent.md
-│   └── compliance-agent.md
+│   ├── price-discovery-agent.md        (remaining)
+│   ├── competitive-intel-agent.md      (remaining)
+│   ├── quote-assembly-agent.md         (remaining)
+│   └── compliance-agent.md             (remaining)
 │
 ├── knowledge/                ← reference the agents read. Schemas ship empty; you populate.
-│   ├── procurement-process.md          (general govcon knowledge — ships usable)
-│   ├── sourcing-logic.md               (the routing decision framework — ships usable)
-│   ├── data-hygiene-rules.md           (intake quality rules — ships usable)
-│   ├── vendor-registry.schema.yaml     (schema + worked example; you populate real data)
-│   ├── routing-patterns.schema.yaml    (schema + worked example; you populate)
-│   └── agency-intelligence.schema.md   (per-agency profile template)
+│   ├── 00-procurement-process.md       (general govcon knowledge — remaining)
+│   ├── 01-two-lane-model.md            (the scope / eject test — remaining)
+│   ├── 02-channel-routing.md           (complexity→channel + sector map — remaining)
+│   ├── 03-sourcing-heuristics.md       (the decision rules — remaining)
+│   ├── 04-compliance-forms.md          (form bundle + field-map model — remaining)
+│   ├── 05-data-hygiene-rules.md        (intake quality rules — remaining)
+│   ├── 06-voice-and-outreach.md        (outreach + delivery voice — remaining)
+│   ├── 07-optimization-models.md       (the two objective functions — ships usable)
+│   ├── market-intelligence.md          (CA procurement schema + products→vendors — remaining)
+│   ├── vendor-registry.schema.yaml     (schema + worked example; you populate — remaining)
+│   ├── routing-patterns.schema.yaml    (schema + worked example; you populate — remaining)
+│   ├── agency-intelligence.schema.md   (per-agency profile schema — remaining)
+│   └── agency-intelligence/            (per-agency profiles; grows over time)
+│
+├── data/                     ← raw datasets (gitignored; schema preserved in data/README.md)
 │
 ├── data-model/
-│   ├── ERD.md                ← entities + relationships (generalized from your whiteboard)
-│   └── schema.sql            ← Postgres/Supabase DDL you can run as-is
+│   ├── ERD.md                ← entities + relationships (remaining)
+│   └── schema.sql            ← Postgres/Supabase DDL: Half A + Half B + bridge (remaining)
 │
 └── workflow/
-    ├── state-machine.md      ← the Trigger → Task → Action lifecycle
-    └── human-gates.md        ← the two human-in-the-loop approval gates
+    ├── state-machine.md      ← the 8-stage lifecycle + transitions (remaining)
+    ├── human-gates.md        ← the two human-in-the-loop approval gates (remaining)
+    └── handoff.md            ← the Sourcing→Quoting handoff contract (remaining)
 ```
 
-Read order: this file → `ARCHITECTURE.md` → `workflow/state-machine.md` → the `agents/` → fill `config/` → populate `knowledge/` → run `data-model/schema.sql`.
+Read order: `HANDOFF.md` (if resuming) → this file → `ARCHITECTURE.md` → `CLAUDE.md` → `knowledge/07-optimization-models.md` → the `agents/` → fill `config/` → populate `knowledge/` → run `data-model/schema.sql`.
 
 ---
 
@@ -77,7 +94,7 @@ This framework is SDK-shaped but SDK-agnostic in expression. Concretely:
 
 1. **Each file in `agents/` becomes one agent's system prompt.** The orchestrator is your top-level agent; the rest are subagents it dispatches. In the Agent SDK, define the orchestrator as the main loop and register the specialists as subagents (or as separate sessions the orchestrator calls as tools).
 
-2. **Each MCP/tool named in `ARCHITECTURE.md` is described by capability, not product.** You bind the capability to whatever you actually run: an ERP connector, a product-database connector, an email connector, a distributor punchout, a web-search tool, a public-spend-data source. The agents reference capabilities (`email.send`, `catalog.lookup`, `punchout.price`) so you can swap providers without touching the brain.
+2. **Each MCP/tool named in `ARCHITECTURE.md` is described by capability, not product.** You bind the capability to whatever you actually run: an ERP connector, a product-database connector, an email connector, a distributor punchout, a web-search tool, a public-spend-data source. The agents reference capabilities (`email.send`, `catalog.lookup`, `punchout.price`) so you can swap providers without touching the brain. Copy `.mcp.json.example` to `.mcp.json` (gitignored) and fill in your real providers + secrets there.
 
 3. **The two human gates are SDK hooks.** Implement them as approval interrupts — the agent pauses, surfaces a draft, waits for the salesperson's yes/edit/no, then continues. See `workflow/human-gates.md`.
 
@@ -91,10 +108,10 @@ This framework is SDK-shaped but SDK-agnostic in expression. Concretely:
 
 | Ships usable out of the box | You must populate before first run |
 |---|---|
-| All 9 agent definitions | `config/company-profile.yaml` (your identity, certs) |
-| `procurement-process.md` (general govcon) | `config/sourcing-policy.yaml` (routing + gate rules) |
-| `sourcing-logic.md` (the decision framework) | `knowledge/vendor-registry.yaml` (your vendors) |
-| `data-hygiene-rules.md` | `knowledge/routing-patterns.yaml` (your patterns) |
+| The agent definitions (the system prompts) | `config/company-profile.yaml` (your identity, certs) |
+| `knowledge/07-optimization-models.md` (the two models) | `config/sourcing-policy.yaml` (routing, gates, model params) |
+| `knowledge/00–06` (general govcon + decision framework) | `knowledge/vendor-registry.yaml` (your vendors) |
+| `.mcp.json.example` (capability bindings to adapt) | `knowledge/routing-patterns.yaml` (your patterns) |
 | The data model + SQL | `knowledge/agency-intelligence/` (grows over time) |
 | The state machine + gates | `config/jurisdictions.yaml` (the states you sell to) |
 

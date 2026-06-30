@@ -8,7 +8,7 @@ A raw inbound item from `mail.read` (or a portal feed): sender, subject, body, a
 
 ## Reads (knowledge)
 - `knowledge/05-data-hygiene-rules.md` — how to tell a real RFQ from portal noise, ETA chases, tracking pings, and automated notices.
-- `knowledge/agency-intelligence.yaml` — known buyer agencies, their identifiers, their quirks, the real human contacts vs. automated addresses.
+- `knowledge/agency-intelligence/` — per-agency profiles (one file per agency, on the `agency-intelligence.schema.md` schema): known buyer agencies, their identifiers, their quirks, the real human contacts vs. automated addresses.
 - `knowledge/01-two-lane-model.md` — for the pre-classification.
 
 ## What you do

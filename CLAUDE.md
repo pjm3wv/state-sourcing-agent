@@ -37,9 +37,16 @@ Orchestrator owns the pipeline + state + the two gates, and dispatches two top-l
 
 ### Done
 - `README.md`, `ARCHITECTURE.md` (two-step + 8-stage reconciliation + scope cut)
-- `config/company-profile.template.yaml`, `config/sourcing-policy.template.yaml` (incl. Two-Lane, pricing-authority, margin, batching, vendor-promotion, seasonal), `config/jurisdictions.template.yaml`
+- `config/company-profile.template.yaml`, `config/sourcing-policy.template.yaml` (incl. Two-Lane, pricing-authority, **optimization-model params**, margin, batching, vendor-promotion, seasonal), `config/jurisdictions.template.yaml`
 - `agents/`: orchestrator, sourcing-agent, quoting-agent, intake-agent, extraction-agent, catalog-agent, sourcing-strategist
 - `knowledge/07-optimization-models.md` (the two objective functions — cost minimization + price-to-win, with tunable params and the calibration/cold-start problem)
+- `HANDOFF.md` (session-to-session handoff), `.mcp.json.example` (capability bindings), `data/` + `data/README.md` (gitignored dataset + preserved schema)
+
+### Conventions locked (cleanup pass)
+- **Knowledge files use the numbered `00–07` scheme** (README map matches). New knowledge docs follow it.
+- **`agency-intelligence`** = per-agency profiles in `knowledge/agency-intelligence/` + one `agency-intelligence.schema.md`.
+- **Lane A = detect-and-eject only** in this deployment (`sourcing-policy → two_lane.lane_a.enabled: false`); scaffolding retained for agnosticism.
+- **Optimization params live in `config/sourcing-policy.yaml → optimization`** (conservative defaults until calibration).
 
 ### Remaining (good first subagent tasks — parallelizable)
 - `agents/`: **price-discovery-agent**, **competitive-intel-agent**, **quote-assembly-agent** (bid pricing + assembly), **compliance-agent**

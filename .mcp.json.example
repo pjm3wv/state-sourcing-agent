@@ -1,0 +1,48 @@
+{
+  "//": "EXAMPLE capability→provider bindings for the Sourcing Brain. Copy to .mcp.json (gitignored) and fill in real servers + secrets. The agents reference CAPABILITIES (mail.*, catalog.*, erp.*, web.search, spend.public/awards.public, store.*), never product names — these bindings are the only place a concrete provider appears. Swap a provider here without touching the brain.",
+  "//scope": "This deployment is Lane-B-only: punchout.price (Lane A) is intentionally NOT wired into the sourcing path. Leave it unbound or omit it.",
+  "//secrets": "Never commit real tokens. Reference them via ${ENV_VAR} and keep .mcp.json out of git (see .gitignore).",
+
+  "mcpServers": {
+    "mail": {
+      "//capability": "mail.read / mail.send — read inbound RFQs, send outbound (gated)",
+      "//bind-to": "your email/M365 connector",
+      "command": "REPLACE_ME",
+      "args": [],
+      "env": { "MAIL_TOKEN": "${MAIL_TOKEN}" }
+    },
+    "catalog": {
+      "//capability": "catalog.lookup / catalog.match — query + fuzzy-match the internal product catalog",
+      "//bind-to": "your product DB / data warehouse (e.g. Supabase)",
+      "command": "REPLACE_ME",
+      "args": [],
+      "env": { "SUPABASE_URL": "${SUPABASE_URL}", "SUPABASE_KEY": "${SUPABASE_KEY}" }
+    },
+    "erp": {
+      "//capability": "erp.estimate.write / erp.quote.write — push the cost estimate (step 1) and priced quote (step 2)",
+      "//bind-to": "your ERP / quoting system (e.g. QuickBooks)",
+      "command": "REPLACE_ME",
+      "args": [],
+      "env": { "ERP_TOKEN": "${ERP_TOKEN}" }
+    },
+    "web": {
+      "//capability": "web.search — product identity / spec / contact discovery + Part B price BENCHMARK only (never a Part A cost source)",
+      "//bind-to": "any web search tool",
+      "command": "REPLACE_ME",
+      "args": []
+    },
+    "spend_public": {
+      "//capability": "spend.public / awards.public — public spend-transparency + award/solicitation history (the CA procurement data backbone)",
+      "//bind-to": "public procurement record source / the loaded CA procurement warehouse",
+      "command": "REPLACE_ME",
+      "args": []
+    },
+    "store": {
+      "//capability": "store.read / store.write — durable RFQ/line/quote/compliance state (see data-model/schema.sql)",
+      "//bind-to": "your database",
+      "command": "REPLACE_ME",
+      "args": [],
+      "env": { "DATABASE_URL": "${DATABASE_URL}" }
+    }
+  }
+}

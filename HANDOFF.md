@@ -1,5 +1,11 @@
 # HANDOFF — Sourcing Brain (session-to-session)
 
+> **START HERE.**
+> - **Repo:** `pjm3wv/state-sourcing-agent` · **Branch:** `claude/sourcing-brain-setup-ckpf30`
+> - **The CA procurement CSVs are gitignored and will NOT be in your clone.** Before any
+>   data work, ask the user to re-upload `CA_Procurement_Catalog_1.zip` and extract it into
+>   `data/` (the full schema is preserved in `data/README.md`). See §4.
+
 This document hands the **Sourcing Brain** build to a fresh Claude Code session
 that starts from a clean clone of this repo. It captures everything that lived
 only in the prior working session — current state, an as-built review, the open
@@ -78,21 +84,23 @@ data you must first restore the CSVs — **ask the user to re-upload
 per `data/README.md`), then extract into `data/`. Do not assume the data is
 present; check `ls data/` first.
 
-## 5. Open decisions (NOT confirmed by the user — resolve before/at dispatch)
+## 5. Decisions
 
-1. **What to build now.** *Recommended:* launch all four tracks (§8) in parallel
-   after a quick convention-lock. Alternatives: hold the data-engineer track
-   until a Supabase project is confirmed; or fix the doc flags (§7) first.
-2. **Knowledge-file naming canon** (flag §7.1). *Recommended:* adopt the numbered
-   `00–07` scheme the agents already reference and fix the `README.md` repo map
-   to match (it currently lists divergent descriptive names).
-3. **Lane-A handling** given the Lane-B-only scope cut (flag §7.3).
-   *Recommended:* keep Lane-A as **detect-and-eject only** — intake ejects
-   catalog-routable work; the engine never sources or prices it — and retain the
-   `two_lane` config scaffolding.
+**Resolved (applied to the repo in a cleanup pass):**
+- **Knowledge-file naming → numbered `00–07`** is the canon; `README.md`'s map
+  was corrected to match. Use numbered names for all new knowledge files.
+- **Lane-A → detect-and-eject only.** `config/sourcing-policy` now carries
+  `two_lane.lane_a.enabled: false` with a scope note; the engine retains Lane-A
+  scaffolding but never sources/prices it in this deployment.
+- **`agency-intelligence` shape → a per-agency directory** (`knowledge/agency-intelligence/`)
+  plus one schema doc (`knowledge/agency-intelligence.schema.md`); the stray
+  `intake-agent.md` reference was fixed.
 
-If you cannot reach the user, proceed on the three recommended defaults and state
-that assumption in your first message and in commit messages.
+**Still open (your call — not a cleanup item):**
+- **What to build now / dispatch.** *Recommended:* launch all four tracks (§8) in
+  parallel. Alternatives: hold the data-engineer track until a Supabase project
+  is confirmed; or sequence the tracks. This was never greenlit — confirm with
+  the user before spawning build subagents.
 
 ## 6. Remaining build work (the file inventory)
 
@@ -118,47 +126,43 @@ matching the CSV columns so they load directly) + the **bridge**
 Sourcing→Quoting handoff: the MD-file contract + the QuickBooks estimate scaffold
 + the sourcing log).
 
-## 7. As-built review flags (from the prior session — verify, then address)
+## 7. As-built review flags
 
-1. **Knowledge-file naming is inconsistent across the top docs (blocker).**
-   CLAUDE.md + the agents use numbered files (`01-…`, `07-…`); `README.md`'s map
-   lists divergent descriptive names and omits the two-lane/optimization files.
-   Pick one canon (see §5.2) before authoring, or cross-references will drift.
-2. **`agency-intelligence` has three shapes.** `intake-agent.md` reads
-   `knowledge/agency-intelligence.yaml`; README implies a
-   `knowledge/agency-intelligence/` directory + `agency-intelligence.schema.md`;
-   CLAUDE.md names only the schema. *Suggested:* a directory of per-agency YAML
-   profiles + one schema doc (fits the write-back loop). Reconcile all references.
-3. **Lane-A vs. the scope cut.** CLAUDE.md says Lane-B-only/eject-at-intake, but
-   ARCHITECTURE, the templates (`two_lane`, `push_to_buyer`, `catalog_routable`),
-   and the planned `06-voice` "push the leveraged lane" move still describe
-   running Lane A. Decide how much Lane-A scaffolding to keep (see §5.3) and make
-   the docs internally consistent.
+**Fixed in the cleanup pass (verify, then build on them):**
+1. ✅ **Knowledge-file naming** — numbered `00–07` canon; README map corrected.
+2. ✅ **`agency-intelligence` shape** — per-agency directory + one schema doc;
+   `intake-agent.md` reference fixed; `knowledge/agency-intelligence/` created.
+5. ✅ **`pricing_authority` default** — `web.search` removed from
+   `default_allowed_sources` (cost is vendor-quote/catalog/punchout only; web is
+   an identity/benchmark input, never a Part-A cost source).
+6. ✅ **`.mcp.json.example`** — added with placeholder capability bindings (no
+   secrets); `punchout.price` intentionally left unbound (Lane A out of scope).
+7. ✅ **Optimization params seeded** — `config/sourcing-policy → optimization`
+   now carries conservative starting defaults for both models (λ, tier credits,
+   risk weights, soft costs, `k` bands, `b_adj` percentile, F&R tolerance).
+   *Residual:* Part A still doesn't specify how candidate offers per line are
+   generated/deduped (vendor count, equivalent-product collapsing) — define this
+   when authoring `price-discovery-agent.md` + `03-sourcing-heuristics.md`.
+
+**Partially addressed — finish during the build:**
+3. **Lane-A vs. the scope cut.** Config now says detect-and-eject
+   (`lane_a.enabled: false`). Still ensure the *knowledge* docs you author
+   (`01-two-lane-model.md`, `06-voice-and-outreach.md`) frame Lane A as
+   detection-for-ejection, not an active lane, and keep ARCHITECTURE consistent.
+
+**Still open (build work, not cleanup):**
 4. **Orchestrator vs. the two top-level agents — who dispatches whom.**
-   ARCHITECTURE's diagram shows the orchestrator dispatching the 7 specialists
+   ARCHITECTURE's diagram shows the orchestrator dispatching the specialists
    directly; CLAUDE.md says it dispatches the two top-level agents (Sourcing,
    Quoting), each owning its workers. Reconcile this in `workflow/state-machine.md`
    + `workflow/handoff.md` — the Step-1→Step-2 boundary and the MD-file handoff
    contract are the most important thing to get right.
-5. **`pricing_authority` default leaks open-web pricing.** The
-   `sourcing-policy` template's `default_allowed_sources` includes both
-   `punchout.price` and `web.search` globally, but the rule is "web search for
-   identity/spec/contact only, never catalog price." Tighten the default so cost
-   comes from vendor quotes; web pricing is a Part-B *benchmark* only, never a
-   Part-A cost source.
-6. **No `.mcp.json.example`.** Capabilities are named everywhere but never bound,
-   and `.mcp.json` is gitignored. Add a committed `.mcp.json.example` with
-   placeholder bindings (no secrets) so deployments have a concrete wiring target.
-7. **Model gaps to seed.** Part A doesn't specify how candidate offers per line
-   are generated/deduped (vendor count, equivalent-product collapsing); risk
-   weights / `λ` / margin ship as `0.0`. Seed conservative starting defaults so
-   the cost model runs before calibration.
 
 ## 8. Proposed parallel-subagent build plan
 
 Four tracks write to **disjoint directories**, so they parallelize without file
-conflicts. Lock the conventions from §5.2/§5.3 first (a one-paragraph note),
-then fan out.
+conflicts. The naming/Lane-A/agency-intel conventions are already locked (§5),
+so you can fan out directly.
 
 | Track | Builds | Notes / dependencies |
 |---|---|---|

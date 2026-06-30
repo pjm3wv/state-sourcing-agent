@@ -31,14 +31,21 @@ autonomy:
 # Lane A = leveraged catalog/cooperative: ONE bid, no competition, fastest delivery.
 # Lane B = competitive/specialty: multi-vendor sourcing + full compliance packet.
 # ─────────────────────────────────────────────────────────────────────────────
+# SCOPE NOTE: this deployment is Lane-B-only. Lane A is DETECTED so catalog-
+# routable work can be EJECTED at intake to the existing catalog/cooperative
+# process — the engine never sources or prices a Lane-A line here. The lane_a
+# block below is retained (the engine is company-agnostic and another deployment
+# may run Lane A); `lane_a.enabled: false` keeps the sourcing/pricing/push
+# behavior off while leaving detection on.
 two_lane:
   lane_a:
+    enabled: false              # false → detect-to-eject only (no sourcing/pricing/push). See SCOPE NOTE.
     name: ""                    # e.g. "Cooperative catalog lane"
     eligible_when:
       - "item is on a held catalog/cooperative vehicle (exact OR equivalent)"
       - "buyer cites a catalog item number or the contract number"
     pricing_source: "punchout.price"   # must be allowed for this lane in pricing_authority
-    push_to_buyer: true               # proactively offer the buyer the no-bid lane when eligible
+    push_to_buyer: false              # only meaningful if lane_a.enabled; proactively offer the no-bid lane
     buyer_pitch_ref: "knowledge/06-voice-and-outreach.md#push-the-leveraged-lane"
   lane_b:
     name: ""                    # e.g. "Competitive / specialty sourcing lane"
@@ -63,14 +70,18 @@ pricing_authority:
       forbidden_sources: []        # e.g. ["web.search"] to forbid open-web pricing for this vendor
       reason: ""
   default_allowed_sources:         # used when no specific rule matches
+    # COST sources only. web.search is deliberately EXCLUDED here: open-web data
+    # may inform product identity/spec/contact and the Part B bid *benchmark*, but
+    # it is never a vendor-cost source for the Part A cost floor. Add it to a
+    # specific rule above only if you truly intend web pricing as a cost input.
     - "vendor.email"
     - "catalog.lookup"
     - "punchout.price"
-    - "web.search"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ROUTING — the channel decision framework. See knowledge/sourcing-logic.md for
-# the reasoning; this is the company-specific tuning of it.
+# ROUTING — the channel decision framework. See knowledge/02-channel-routing.md
+# and knowledge/03-sourcing-heuristics.md for the reasoning; this is the
+# company-specific tuning of it.
 # ─────────────────────────────────────────────────────────────────────────────
 routing:
   # The first triage question for every line item, in order. First match wins.
@@ -84,6 +95,7 @@ routing:
   batching:
     same_agency_window_hours: 72  # group RFQs from one agency within this window for one human review
     same_vendor_consolidate: true # consolidate multiple lines/RFQs to one vendor into a single outreach
+    wait_for_complete_item_list: true # intake holds a partial RFQ until the full item list is in hand
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MARGIN — how the Quote Assembly agent prices out. Generic tiers; set your own.
@@ -96,6 +108,46 @@ margin:
     enabled: false             # if downstream rebates change true margin, model them here
     notes: ""
   rounding: "none"             # none | nearest_cent | psychological
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPTIMIZATION MODELS — the tunable parameters for the two objective functions in
+# knowledge/07-optimization-models.md. Values below are CONSERVATIVE STARTING
+# DEFAULTS so the models run before calibration — not tuned numbers. The bid
+# model (Part B) is uncalibrated until rfq_outcome win/loss data exists; until
+# then it runs on the price benchmark + these defaults. See model doc §Calibration.
+# ─────────────────────────────────────────────────────────────────────────────
+optimization:
+  # ----- Part A: Sourcing Agent — minimize effective cost -----
+  cost:
+    lambda_consolidation: 25.0    # $ value of removing one supplier from the order.
+                                  # Higher → accept higher per-line price for fewer vendors.
+    vendor_tier_credit:           # V(j): cost-equivalent reward by vendor tier (fraction of extended price)
+      PARTNER: 0.06
+      SOURCING_PARTNER: 0.03
+      TRANSACTIONAL: 0.0
+      UNKNOWN: -0.02              # unknown vendors are penalized (treated as costlier)
+    risk_weights:                 # how much each risk factor inflates effective cost
+      availability: 0.15          # w_avail — dead-SKU / unconfirmed-availability risk
+      lead_time: 0.20             # w_lead  — lead time approaching/exceeding the deadline
+      spec_fit: 0.15              # w_spec  — uncertainty the offered item meets spec
+    deadline_buffer_days: 5       # lead_penalty is 0 if lead time beats the deadline by this much
+    too_small_to_source_usd: 100  # lines under this extended value: just buy, don't source
+
+  # ----- Part B: Quoting Agent — optimal bid (price-to-win) -----
+  bid:
+    soft_cost:
+      s_supplier: 75.0            # recognized $ friction per extra distinct supplier (PO/admin/receiving)
+      s_freight: 0.0              # added if material freight/handling is on us
+    b_adj_anchor_percentile: 50   # reference price = this percentile of cluster paid-price history (50 = median)
+    k_by_acq_method:              # competition-intensity steepness by procurement style (acq_method)
+      low_competition: 6.0        # sole-source-ish / few suppliers / non-competitive F&R → flat curve, price up
+      medium_competition: 12.0
+      high_competition: 20.0      # open competitive / many bidders / sealed bid → steep curve, bid near floor
+    default_k_band: "medium_competition"  # used when acq_method is unknown
+    bid_preferences:              # pref: buyer evaluates our bid as b × (1 − pref) for these certs
+      # - cert: "DVBE"
+      #   pref: 0.05
+    fr_ceiling_tolerance: 1.15    # Fair & Reasonable cap = benchmark median paid × this (bid never exceeds)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # VENDOR PROMOTION — how a transactional supplier becomes a recurring partner.
