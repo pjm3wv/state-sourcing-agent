@@ -1,0 +1,120 @@
+# sourcing-policy.template.yaml
+# COMPANY-SPECIFIC CONFIGURATION — copy to sourcing-policy.yaml and fill in.
+# This is where the operating rules live. The engine enforces what you put here;
+# it assumes none of it. Two different companies write two different policies and
+# the same engine behaves differently for each.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTONOMY — how far the agents run before stopping for a human.
+# Default profile is "supervised": end-to-end autonomous except the two gates.
+# ─────────────────────────────────────────────────────────────────────────────
+autonomy:
+  profile: "supervised"        # human_in_loop | supervised | autonomous
+  gates:
+    vendor_outreach:
+      enabled: true            # GATE 1 — pause before any message goes to a vendor
+      auto_approve_under: null  # e.g. set a dollar/known-vendor threshold to skip the gate; null = always gate
+    send_or_submit:
+      enabled: true            # GATE 2 — pause before customer-facing quote / bid submission
+      auto_approve_under: null  # keep null; this gate should almost always hold
+  escalate_to_human_when:
+    - "a line item cannot be parsed with confidence"
+    - "no catalog match and no routing pattern applies"
+    - "a contract-vehicle or eligibility conflict is detected"
+    - "vendor pricing is missing past the internal deadline"
+    - "compliance requires a document the company cannot produce"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE TWO-LANE DECISION — the single most important routing call, made first.
+# Full model in knowledge/01-two-lane-model.md. The `routing.triage_order` below
+# is the per-line mechanism; this block sets the lane-level behavior.
+# Lane A = leveraged catalog/cooperative: ONE bid, no competition, fastest delivery.
+# Lane B = competitive/specialty: multi-vendor sourcing + full compliance packet.
+# ─────────────────────────────────────────────────────────────────────────────
+two_lane:
+  lane_a:
+    name: ""                    # e.g. "Cooperative catalog lane"
+    eligible_when:
+      - "item is on a held catalog/cooperative vehicle (exact OR equivalent)"
+      - "buyer cites a catalog item number or the contract number"
+    pricing_source: "punchout.price"   # must be allowed for this lane in pricing_authority
+    push_to_buyer: true               # proactively offer the buyer the no-bid lane when eligible
+    buyer_pitch_ref: "knowledge/06-voice-and-outreach.md#push-the-leveraged-lane"
+  lane_b:
+    name: ""                    # e.g. "Competitive / specialty sourcing lane"
+    triggers:
+      - "item not on a held catalog (specialty / custom / regulated)"
+      - "solicitation is an explicit competitive sealed bid"
+    requires_compliance_packet: true
+  mixed_rfq_handling: "per_line"   # an RFQ may be mostly Lane A with a few Lane B lines; decide per line
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PRICING AUTHORITY — where a given category's pricing is ALLOWED to come from.
+# This is the generalized version of "never get X pricing from the open web."
+# The Price Discovery agent obeys this map strictly.
+# ─────────────────────────────────────────────────────────────────────────────
+pricing_authority:
+  # For each rule: which categories/vendors it covers, the ONLY allowed source,
+  # and explicitly forbidden sources. Leave empty if you have no such constraints.
+  rules:
+    - applies_to_vendor: ""        # e.g. a distributor whose pricing is account-specific
+      applies_to_categories: []
+      allowed_source: ""           # capability name: "punchout.price" | "vendor.email" | "web.search" | "catalog.lookup"
+      forbidden_sources: []        # e.g. ["web.search"] to forbid open-web pricing for this vendor
+      reason: ""
+  default_allowed_sources:         # used when no specific rule matches
+    - "vendor.email"
+    - "catalog.lookup"
+    - "punchout.price"
+    - "web.search"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTING — the channel decision framework. See knowledge/sourcing-logic.md for
+# the reasoning; this is the company-specific tuning of it.
+# ─────────────────────────────────────────────────────────────────────────────
+routing:
+  # The first triage question for every line item, in order. First match wins.
+  triage_order:
+    - "catalog_routable"     # already in our catalog / on a punchout we hold → price directly
+    - "known_pattern"        # a routing pattern matches (agency + category → vendor) → use it
+    - "partner_vendor"       # category maps to a partner/sourcing-partner vendor → contact them
+    - "competitive_outreach" # none of the above → cold multi-vendor outreach
+  catalog_routable_sources: []   # capability names that count as "we can price this now" (e.g. ["catalog.lookup","punchout.price"])
+  min_vendors_competitive: 2      # how many vendors to solicit on a competitive line
+  batching:
+    same_agency_window_hours: 72  # group RFQs from one agency within this window for one human review
+    same_vendor_consolidate: true # consolidate multiple lines/RFQs to one vendor into a single outreach
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARGIN — how the Quote Assembly agent prices out. Generic tiers; set your own.
+# ─────────────────────────────────────────────────────────────────────────────
+margin:
+  method: "markup_on_cost"     # markup_on_cost | margin_on_price
+  default_pct: 0.0             # fill in
+  tiers: []                    # optional: [{max_cost: 1000, pct: 0.30}, {max_cost: 10000, pct: 0.22}, ...]
+  rebate_adjustment:
+    enabled: false             # if downstream rebates change true margin, model them here
+    notes: ""
+  rounding: "none"             # none | nearest_cent | psychological
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VENDOR PROMOTION — how a transactional supplier becomes a recurring partner.
+# Drives the "living" write-back after each closed RFQ.
+# ─────────────────────────────────────────────────────────────────────────────
+vendor_promotion:
+  responses_to_promote: 3      # N good responses for the same category → propose promotion
+  window_days: 180
+  demote_after_silent_days: 365
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SEASONAL — optional behavioral nudges tied to the procurement calendar.
+# Government buyers spend "use-it-or-lose-it" money near fiscal-year close.
+# ─────────────────────────────────────────────────────────────────────────────
+seasonal:
+  end_of_fiscal_year:
+    enabled: false
+    fiscal_year_end: ""          # e.g. "06-30"
+    behaviors:
+      - "extend quote validity past FY close (e.g. to end of the following month)"
+      - "classify late orders against the next fiscal year (delivery on/after FY start)"
+      - "proactively prompt buyers: any use-it-or-lose-it projects we can help with?"

@@ -1,0 +1,29 @@
+# jurisdictions.template.yaml
+# COMPANY-SPECIFIC CONFIGURATION — copy to jurisdictions.yaml and fill in.
+# Defines the procurement environments you sell into. The Compliance agent and the
+# Competitive Intel agent read this to know which rules, forms, and public data
+# sources apply to a given RFQ. The engine ships with zero jurisdictions assumed.
+
+jurisdictions:
+  - id: ""                       # e.g. "ca-state", "us-federal", "ny-state", "tx-state"
+    name: ""                     # human-readable
+    level: ""                    # state | federal | local | cooperative
+    # Public data sources the Competitive Intel agent may use (public record only).
+    public_data:
+      spend_transparency_url: ""  # public spend portal, if any
+      awards_url: ""              # public award/contract record source
+      solicitations_url: ""       # where open solicitations are posted
+    # Compliance artifacts that may be required on a bid in this jurisdiction.
+    # List the form identifiers; the Compliance agent maps them to the RFQ.
+    required_forms_catalog:
+      - id: ""                    # the form's identifier/number
+        name: ""
+        when_required: ""         # condition under which this form is needed
+        signature: ""             # who signs: "primary_signatory" | "owner_or_principal" | "none"
+    # Eligibility levers that matter here (which certification unlocks what).
+    eligibility:
+      set_aside_types: []         # e.g. ["small business", "service-disabled veteran", "women-owned"]
+      preferred_certifications: []  # which of the company's certs are advantageous here
+      notes: ""
+    # Buyer segments active in this jurisdiction.
+    segments: []                  # e.g. ["state agency", "higher education", "locality", "special district"]

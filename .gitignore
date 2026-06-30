@@ -1,0 +1,18 @@
+# Raw data — source CSVs and large datasets stay OUT of git.
+# The CA procurement star-schema CSVs (Line_Items_Clean, Product_Catalog,
+# CrossSupplier_Pricing, Suppliers, Buyers_Depts, Brands, UNSPSC_Consistency)
+# live here locally and load into the warehouse; they are not versioned.
+data/*
+!data/.gitkeep
+!data/README.md
+
+# Secrets / local env — never commit
+.env
+.env.*
+*.pem
+*.key
+.mcp.json
+
+# OS / editor noise
+.DS_Store
+*.swp

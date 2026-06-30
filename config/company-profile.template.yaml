@@ -1,0 +1,60 @@
+# company-profile.template.yaml
+# COMPANY-SPECIFIC CONFIGURATION — copy to company-profile.yaml and fill in.
+# The engine reads its identity entirely from this file. It hardcodes nothing.
+# Nothing here is required by the engine to be any particular value; it is all yours.
+
+company:
+  legal_name: ""              # e.g. "Acme Safety Supply, Inc."
+  short_name: ""              # e.g. "Acme"
+  address: ""
+  phone: ""
+  email: ""                   # primary inbound/outbound address the agents use
+  tax_id: ""                  # FEIN / EIN
+  duns: ""
+  cage_code: ""               # if federal
+  uei: ""                     # SAM.gov Unique Entity ID, if federal
+
+# Certifications the company holds. The engine treats these as opaque labels and
+# uses them only where a jurisdiction or solicitation calls for a specific one.
+# Do NOT assume any particular certification scheme — list whatever applies.
+certifications:
+  - code: ""                  # e.g. "DVBE", "SDVOSB", "WOSB", "HUBZone", "MBE", "state-SB"
+    name: ""                  # human-readable
+    issuer: ""                # who certifies it
+    number: ""
+    expires: ""               # YYYY-MM-DD
+    use_when: ""              # free text: contexts where this cert is the right one to cite
+
+# Contract vehicles the company can sell through. Generic — any vehicle type.
+contract_vehicles:
+  - id: ""                    # internal label
+    name: ""                  # e.g. "State MRO cooperative", "GSA Schedule", "national co-op"
+    number: ""                # the actual contract/agreement number
+    scope: ""                 # product categories it covers
+    jurisdictions: []         # which states/federal it applies to
+    segment: []               # buyer segments it serves (state agency, locality, higher-ed, federal, etc.)
+    notes: ""
+
+# Who can authorize what. The compliance agent uses this to know whose signature
+# goes where and who must sign personally vs. whose name may be typed.
+authority:
+  primary_signatory:
+    name: ""
+    title: ""
+    may_be_typed: true        # may the agent place a typed signature for routine forms?
+  owner_or_principal:
+    name: ""
+    title: ""
+    must_sign_personally: []  # list form types that require this person's wet/personal signature
+  accounting_contact:
+    name: ""
+    email: ""
+
+# Categories the company sells. Drives catalog matching and vendor routing.
+product_categories: []        # e.g. ["PPE", "MRO", "janitorial", "safety", "tactical", "medical"]
+
+# Channels through which RFQs arrive. The intake agent monitors these.
+inbound_channels:
+  - type: "email"             # email | portal | api
+    address_or_url: ""
+    notes: ""
